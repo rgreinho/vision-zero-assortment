@@ -14,4 +14,4 @@ Usage
 
 .. code-block:: bash
 
-  poetry run scrapers/amplify.py
+  poetry run python scrapers/amplify.py
