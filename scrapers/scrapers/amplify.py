@@ -1,11 +1,12 @@
 import asyncio
-import csv
 import dataclasses
 import json
+import re
 
 import aiohttp
 
 from scrapers.core import aiohelper
+from scrapers.core import container
 from scrapers.core.container import Organization
 
 SEARCH_URL = "https://api.givegab.com/v1/campaigns"
@@ -53,7 +54,6 @@ async def parse_details(session, org):
         )
         org.city = content_dict.get("address", {}).get("city", "")
         org.state = content_dict.get("address", {}).get("state", "")
-        org.state = content_dict.get("address", {}).get("state", "")
         org.zipcode = content_dict.get("address", {}).get("postal_code", "")
         org.country = content_dict.get("address", {}).get("country", "")
         org.latitude = content_dict.get("address", {}).get("latitude", 0.0)
@@ -67,6 +67,7 @@ async def parse_details(session, org):
         )
     return org
 
+
 async def search_all():
     async with aiohttp.ClientSession() as session:
         tasks = [parse_summary(session, page) for page in range(0, 35)]
@@ -74,14 +75,7 @@ async def search_all():
         orgs = [org for orgs in page_res for org in orgs]
         tasks = [parse_details(session, org) for org in orgs]
         full_orgs = await asyncio.gather(*tasks)
-        fieldnames = dataclasses.asdict(full_orgs[0]).keys()
-        with open("amplify.csv", "w") as csvfile:
-            writer = csv.DictWriter(
-                csvfile, fieldnames=fieldnames, extrasaction="ignore"
-            )
-            writer.writeheader()
-            for org in full_orgs:
-                writer.writerow(dataclasses.asdict(org))
+        container.orgs2csv("amplify.csv", full_orgs)
 
 
 if __name__ == "__main__":

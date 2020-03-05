@@ -1,3 +1,4 @@
+import csv
 import dataclasses
 
 
@@ -18,6 +19,15 @@ class Organization:
     description: str = ""
     categories: str = ""
     slug: str = ""
+
+
+def orgs2csv(filename, orgs):
+    fieldnames = dataclasses.asdict(Organization("name")).keys()
+    with open(filename, "w") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        for org in orgs:
+            writer.writerow(dataclasses.asdict(org))
 
 
 # ibuyaustin
