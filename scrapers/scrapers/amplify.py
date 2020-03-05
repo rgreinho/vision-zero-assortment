@@ -1,20 +1,15 @@
 import asyncio
 import csv
 import dataclasses
-import re
+import json
 
 import aiohttp
 
+from scrapers.core import aiohelper
+from scrapers.core.container import Organization
+
 SEARCH_URL = "https://api.givegab.com/v1/campaigns"
 DETAILS_URL = "https://www.amplifyatx.org/organizations"
-
-
-@dataclasses.dataclass
-class Organization:
-    name: str
-    slug: str
-    website: str = ""
-    email: str = ""
 
 
 def main():
@@ -22,58 +17,9 @@ def main():
     asyncio.run(search_all())
 
 
-async def fetch_data(session, url, params=None):
-    """
-    Fetch the data from a URL as text.
-    :param aiohttp.ClientSession session: aiohttp session
-    :param str url: request URL
-    :param dict params: request paramemters, defaults to None
-    :return: the data from a URL as text.
-    :rtype: str
-    """
-    if not params:
-        params = {}
-    try:
-        async with session.get(url, params=params) as response:
-            return await response.json()
-    except (
-        aiohttp.ClientError,
-        aiohttp.http_exceptions.HttpProcessingError,
-        aiohttp.client_exceptions.ContentTypeError,
-    ) as e:
-        err = await response.text()
-        print(f"aiohttp exception for {url} -> {e} => {err}")
-        raise e
-
-
-async def fetch_text(session, url, params=None):
-    """
-    Fetch the data from a URL as text.
-    :param aiohttp.ClientSession session: aiohttp session
-    :param str url: request URL
-    :param dict params: request paramemters, defaults to None
-    :return: the data from a URL as text.
-    :rtype: str
-    """
-    if not params:
-        params = {}
-    try:
-        async with session.get(url, params=params) as response:
-            return await response.text()
-    except (
-        aiohttp.ClientError,
-        aiohttp.http_exceptions.HttpProcessingError,
-        aiohttp.client_exceptions.ContentTypeError,
-    ) as e:
-        err = await response.text()
-        print(f"aiohttp exception for {url} -> {e} => {err}")
-        raise e
-
-
 async def parse_summary(session, page):
     """"""
     orgs = []
-    # params = {"show_all": "true", "page": page}
     params = {
         "donatable": "true",
         "dog_campaign": "",
@@ -85,25 +31,41 @@ async def parse_summary(session, page):
         "sort_order": "asc",
         "page": page,
     }
-    response = await fetch_data(session, SEARCH_URL, params)
+    response = await aiohelper.fetch_json(session, SEARCH_URL, params)
     for campaign in response["campaigns"]:
         name = campaign["group"]["name"]
         slug = campaign["group"]["slug"]
-        o = Organization(name, slug)
+        o = Organization(name, slug=slug)
         orgs.append(o)
     return orgs
 
 
 async def parse_details(session, org):
-    website_regex = re.compile(r",\"website\":\"(.*?)\"")
-    email_regex = re.compile(r",\"email\":\"(.*?)\"")
-    response = await fetch_text(session, f"{DETAILS_URL}/{org.slug}")
-    website_match = website_regex.search(response)
-    org.website = website_match.groups()[0] if website_match else ""
-    email_match = email_regex.search(response)
-    org.email = email_match.groups()[0] if email_match else ""
+    response = await aiohelper.fetch_text(session, f"{DETAILS_URL}/{org.slug}")
+    regex = re.compile(fr"var org = new app.Group\((.*)\);")
+    term_match = regex.search(response)
+    if term_match:
+        content_dict = json.loads(term_match.groups()[0])
+        org.address = (
+            f'{content_dict.get("address", {}).get("address1", "")}'
+            "  "
+            f'{content_dict.get("address", {}).get("address2", "")}'
+        )
+        org.city = content_dict.get("address", {}).get("city", "")
+        org.state = content_dict.get("address", {}).get("state", "")
+        org.state = content_dict.get("address", {}).get("state", "")
+        org.zipcode = content_dict.get("address", {}).get("postal_code", "")
+        org.country = content_dict.get("address", {}).get("country", "")
+        org.latitude = content_dict.get("address", {}).get("latitude", 0.0)
+        org.longitude = content_dict.get("address", {}).get("longitude", 0.0)
+        org.contact = content_dict.get("contact", {}).get("name", "")
+        org.email = content_dict.get("contact", {}).get("email", "")
+        org.phone = content_dict.get("contact", {}).get("phone", "")
+        org.website = content_dict.get("website", "")
+        org.categories = ", ".join(
+            [cause.get("name", "") for cause in content_dict.get("causes", {})]
+        )
     return org
-
 
 async def search_all():
     async with aiohttp.ClientSession() as session:
