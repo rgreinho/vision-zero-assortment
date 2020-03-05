@@ -21,3 +21,4 @@ Most of the tools are a one-off type of deal, therefore the quality of the code/
   * CLI: [click](https://click.palletsprojects.com/en/7.x/)
   * HTTP client: [aiohttp](https://aiohttp.readthedocs.io/en/stable/)
   * Logging: [loguru](https://github.com/Delgan/loguru)
+  * Retry: [tenacity](https://tenacity.readthedocs.io/en/latest/)
