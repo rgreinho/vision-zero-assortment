@@ -22,7 +22,7 @@ few cool ideas that can be reused, therefore is probably worth sharing.
     ```
 * Scripts **WITHOUT** dependencies can be dropped in as is.
 * Libraries:
-  * CLI: [click](https://click.palletsprojects.com/en/7.x/)
+  * CLI: [typer](https://typer.tiangolo.com/)
   * HTTP client: [aiohttp](https://aiohttp.readthedocs.io/en/stable/)
   * Logging: [loguru](https://github.com/Delgan/loguru)
   * Retry: [tenacity](https://tenacity.readthedocs.io/en/latest/)
